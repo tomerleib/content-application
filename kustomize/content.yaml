@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: content
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::202581749740:role/db-secrets-role
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: content
+data:
+  MYSQL_HOST: "demo-db.c2kuy37gqgj3.eu-west-1.rds.amazonaws.com"
+  MYSQL_DATABASE: "customers"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: content
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: content
+    app.kubernetes.io/instance: content
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: content
+      app.kubernetes.io/instance: content
+  template:
+    metadata:
+      annotations:
+        secrets.k8s.aws/secret-arn: arn:aws:secretsmanager:eu-west-1:202581749740:secret:app_db-DX48c1
+        secrets.k8s.aws/sidecarInjectorWebhook: enabled
+      labels:
+        app.kubernetes.io/name: content
+        app.kubernetes.io/instance: content
+    spec:
+      serviceAccountName: content
+      securityContext:
+        {}
+      containers:
+        - name: content
+          securityContext:
+            {}
+          image: "202581749740.dkr.ecr.eu-west-1.amazonaws.com/test:0.1" # {"$imagepolicy": "flux-system:content"}
+          imagePullPolicy: IfNotPresent
+          envFrom:
+          - configMapRef:
+              name: content
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources: {}
+---
+
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: content
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /content
+            backend:
+              serviceName: content
+              servicePort: 8000

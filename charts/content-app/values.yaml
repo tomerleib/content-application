@@ -1,0 +1,60 @@
+# Default values for content.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: 202581749740.dkr.ecr.eu-west-1.amazonaws.com/test
+  pullPolicy: IfNotPresent
+  tag: "0.BUILD"
+
+imagePullSecrets: []
+nameOverride: "content"
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::202581749740:role/db-secrets-role
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "content"
+
+podAnnotations:
+  secrets.k8s.aws/sidecarInjectorWebhook: enabled
+  secrets.k8s.aws/secret-arn: arn:aws:secretsmanager:eu-west-1:202581749740:secret:app_db-DX48c1
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+
+
+resources: {}
+
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+mysql_host: "demo-db.c2kuy37gqgj3.eu-west-1.rds.amazonaws.com"
+mysql_database: "customers"
